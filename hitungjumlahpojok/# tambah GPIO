@@ -1,0 +1,148 @@
+# tambah GPIO
+
+from collections import deque #garis
+
+import cv2
+import numpy as np
+
+cap = cv2.VideoCapture(0)                       # webcam port di 0
+
+px = 160
+py = 120
+cap.set(3, px)                                 # webcam ukuran pixel
+cap.set(4, py)                                 # webcam ukuran pixel 
+
+#low_b = np.uint8([0,90,0])                  # filter batas bawah
+#high_b = np.uint8([255,255,255])             # filter batas atas
+
+#sore
+#low_b = np.uint8([0,80,80])                  # filter batas bawah
+#high_b = np.uint8([255,255,255])             # filter batas atas
+
+#malam lampu
+low_b = np.uint8([0,0,190])                  # filter batas bawah
+high_b = np.uint8([255,255,255])             # filter batas atas
+
+
+import RPi.GPIO as GPIO
+GPIO.setwarnings(False)
+
+GPIO.setmode(GPIO.BCM) #Nomer pin pakai GPIO
+sensor1 = 14
+sensor2 = 2
+sensor3 = 3
+sensor4 = 4
+sensor5 = 15
+GPIO.setup(sensor1 , GPIO.OUT)
+GPIO.setup(sensor2 , GPIO.OUT)
+GPIO.setup(sensor3 , GPIO.OUT)
+GPIO.setup(sensor4 , GPIO.OUT)
+GPIO.setup(sensor5 , GPIO.OUT)
+
+#GPIO.output(sensor1, GPIO.HIGH)
+#GPIO.output(sensor2, GPIO.LOW)
+#GPIO.output(sensor3, GPIO.LOW)
+#GPIO.output(sensor4, GPIO.LOW)
+#GPIO.output(sensor5, GPIO.HIGH)
+
+while True:
+    ret, frame = cap.read()                     # webcam baca gambar
+    
+    mask = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)     # add - filter
+    mask = cv2.inRange(mask, low_b, high_b)           # filter mask hitam putih
+    contours, hierarchy = cv2.findContours(mask, 1, cv2.CHAIN_APPROX_NONE)  #kontur
+    
+    if len(contours) > 0 :                      #kontur filter 
+        c = max(contours, key=cv2.contourArea)  #kontur filter 
+        M = cv2.moments(c)                      #kontur filter -titik pusat
+        ((cx, cy), radius) = cv2.minEnclosingCircle(c)
+        
+        if radius > 50:
+            cv2.circle(frame, (int(cx), int(cy)), int(radius), (0, 255, 255), 2)
+
+            
+            #print("X : "+str(radius)) 
+            #print("X : "+str(cx)+"  Y : "+str(cy)) #kontur filter - koorinat titik pusat
+            #cv2.circle(frame, ((int)cx,(int)cy), 5, (255,255,255), -1)
+            
+            if cx >=150 :
+                print("L luar")
+                GPIO.output(sensor1, GPIO.LOW)
+                GPIO.output(sensor2, GPIO.HIGH)
+                GPIO.output(sensor3, GPIO.HIGH) 
+                GPIO.output(sensor4, GPIO.HIGH)
+                GPIO.output(sensor5, GPIO.HIGH)
+            elif cx < 150 and cx >=120 :
+                print("L tengah")
+                GPIO.output(sensor1, GPIO.HIGH)
+                GPIO.output(sensor2, GPIO.LOW)
+                GPIO.output(sensor3, GPIO.HIGH)
+                GPIO.output(sensor4, GPIO.HIGH)
+                GPIO.output(sensor5, GPIO.HIGH)
+            elif cx < 120 and cx > 60 :
+                print("C")
+                GPIO.output(sensor1, GPIO.HIGH)
+                GPIO.output(sensor2, GPIO.HIGH)
+                GPIO.output(sensor3, GPIO.LOW)
+                GPIO.output(sensor4, GPIO.HIGH)
+                GPIO.output(sensor5, GPIO.HIGH)
+            elif cx <=60 and cx >=30  :
+                print("R tengah")
+                GPIO.output(sensor1, GPIO.HIGH)
+                GPIO.output(sensor2, GPIO.HIGH)
+                GPIO.output(sensor3, GPIO.HIGH)
+                GPIO.output(sensor4, GPIO.LOW)
+                GPIO.output(sensor5, GPIO.HIGH)
+            elif cx <30 :
+                print("R luar")
+                GPIO.output(sensor1, GPIO.HIGH)
+                GPIO.output(sensor2, GPIO.HIGH)
+                GPIO.output(sensor3, GPIO.HIGH)
+                GPIO.output(sensor4, GPIO.HIGH)
+                GPIO.output(sensor5, GPIO.LOW)
+        else :
+            print("NL")
+            GPIO.output(sensor1, GPIO.HIGH)
+            GPIO.output(sensor2, GPIO.HIGH)
+            GPIO.output(sensor3, GPIO.HIGH)
+            GPIO.output(sensor4, GPIO.HIGH)
+            GPIO.output(sensor5, GPIO.HIGH)
+        #>>>>>>>>>>>>>> LINE
+    
+    
+    cv2.drawContours(frame, contours, -1, (255,0,0), 1)                            #kontur di tampilkan frame
+    #garis sumbu y
+    cv2.line(img=frame, pt1=(90, 0), pt2=(90, 140), color=(0, 255, 0), thickness=1, lineType=8, shift=0)
+    
+    
+    #garis sumbu y1
+    cv2.line(img=frame, pt1=(30, 0), pt2=(30, 140), color=(0, 255, 0), thickness=1, lineType=8, shift=0)
+    
+    
+    #garis sumbu y1
+    cv2.line(img=frame, pt1=(60, 0), pt2=(60, 140), color=(0, 255, 0), thickness=1, lineType=8, shift=0)
+    
+    #garis sumbu y2
+    cv2.line(img=frame, pt1=(120, 0), pt2=(120, 140), color=(0, 255, 0), thickness=1, lineType=8, shift=0)
+    
+    #garis sumbu y2
+    cv2.line(img=frame, pt1=(150, 0), pt2=(150, 140), color=(0, 255, 0), thickness=1, lineType=8, shift=0)
+
+    
+    #garis sumbu x
+    #cv2.line(img=frame, pt1=(0, 70), pt2=(180, 70), color=(0, 255, 255), thickness=1, lineType=8, shift=0)
+    
+    #garis sumbu x1
+    #cv2.line(img=frame, pt1=(0, 20), pt2=(180, 20), color=(0, 255, 255), thickness=1, lineType=8, shift=0)
+    
+    #garis sumbu x2
+    #cv2.line(img=frame, pt1=(0, 120), pt2=(180, 120), color=(0, 255, 255), thickness=1, lineType=8, shift=0)
+    
+    cv2.imshow("Frame",frame)                   # webcam tampilkan gambar
+    cv2.imshow("Mask",mask)                     # filter tampilkan gambar
+    
+    if cv2.waitKey(1) & 0xff == ord('q'):       # 1 is the time in ms
+        break
+cap.release()
+cv2.destroyAllWindows()
+
